@@ -7,6 +7,7 @@ use crate::encoder::{
         compute_address::ComputeAddressInterface,
         errors::ErrorsInterface,
         fold_unfold::FoldUnfoldInterface,
+        lifetimes::LifetimesInterface,
         lowerer::{Lowerer, MethodsLowererInterface, VariablesLowererInterface},
         places::PlacesInterface,
         predicates_memory_block::PredicatesMemoryBlockInterface,
@@ -1791,10 +1792,17 @@ impl<'p, 'v: 'p, 'tcx: 'v> BuiltinMethodsInterface for Lowerer<'p, 'v, 'tcx> {
     fn encode_newlft_method(&mut self) -> SpannedEncodingResult<()> {
         if !self.builtin_methods_state.encoded_newlft_method {
             self.builtin_methods_state.encoded_newlft_method = true;
+            self.encode_lifetime_token_predicate()?;
             use vir_low::macros::*;
             var_decls!(bw: Lifetime);
-            let method =
-                vir_low::MethodDecl::new("newlft", Vec::new(), vec![bw], Vec::new(), vec![], None);
+            let method = vir_low::MethodDecl::new(
+                "newlft",
+                Vec::new(),
+                vec![bw.clone()],
+                Vec::new(),
+                vec![expr! { acc(LifetimeToken(bw)) }],
+                None,
+            );
             self.declare_method(method)?;
         }
         Ok(())
@@ -1802,10 +1810,17 @@ impl<'p, 'v: 'p, 'tcx: 'v> BuiltinMethodsInterface for Lowerer<'p, 'v, 'tcx> {
     fn encode_endlft_method(&mut self) -> SpannedEncodingResult<()> {
         if !self.builtin_methods_state.encoded_endlft_method {
             self.builtin_methods_state.encoded_endlft_method = true;
+            self.encode_lifetime_token_predicate()?;
             use vir_low::macros::*;
             var_decls!(bw: Lifetime);
-            let method =
-                vir_low::MethodDecl::new("endlft", vec![bw], Vec::new(), Vec::new(), vec![], None);
+            let method = vir_low::MethodDecl::new(
+                "endlft",
+                vec![bw.clone()],
+                Vec::new(),
+                vec![expr! { acc(LifetimeToken(bw)) }],
+                vec![expr! { acc(DeadLifetimeToken(bw)) }],
+                None,
+            );
             self.declare_method(method)?;
         }
         Ok(())
